@@ -15,6 +15,7 @@ export class LoginPage {
     }
 
     async goto(baseUrl) {
+        console.log(`Navigating to ${baseUrl}`);
         await this.page.goto(baseUrl);
     }
 

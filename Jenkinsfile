@@ -1,12 +1,22 @@
+```groovy
 pipeline {
     agent any
+
+    environment {
+        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21.0.12'
+        PATH = "${JAVA_HOME}\\bin;${env.PATH}"
+    }
+
     stages {
+
         stage('Check Environment') {
             steps {
                 bat 'node --version'
                 bat 'npm --version'
+                bat 'java -version'
             }
         }
+
         stage('Install Dependencies') {
             steps {
                 dir('InventoryAuto') {
@@ -14,6 +24,7 @@ pipeline {
                 }
             }
         }
+
         stage('Install Playwright Browser') {
             steps {
                 dir('InventoryAuto') {
@@ -21,6 +32,7 @@ pipeline {
                 }
             }
         }
+
         stage('Run Playwright Tests') {
             steps {
                 dir('InventoryAuto') {
@@ -29,11 +41,21 @@ pipeline {
             }
         }
     }
+
     post {
         always {
             allure([
-                results: [[path: 'InventoryAuto/allure-results']]
+                results: [
+                    [path: 'InventoryAuto/allure-results']
+                ]
             ])
+
+            archiveArtifacts(
+                artifacts: 'InventoryAuto/test-results/**/*,InventoryAuto/playwright-report/**/*',
+                allowEmptyArchive: true,
+                fingerprint: true
+            )
         }
     }
 }
+```

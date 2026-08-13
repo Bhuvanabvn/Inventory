@@ -9,17 +9,13 @@ export default defineConfig({
   ],
 
   use: {
+    baseURL: 'https://inventory-qa.mint360.in/',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'retain-on-failure'
   },
 
   projects: [
-    {
-      name: 'chromium',
-      use: {
-        browserName: 'chromium'
-      }
-    }
+    // ...leave the rest as-is
   ]
 });

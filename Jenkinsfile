@@ -1,11 +1,11 @@
 pipeline {
     agent any
 
-    environment {
-        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21.0.12'
-        PATH = "${JAVA_HOME}\\bin;${env.PATH}"
-    }
-
+ environment {
+    JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21.0.12'
+    ALLURE_HOME = 'C:\\Users\\AGL.PM-BN-4072-LAP\\node_modules\\.bin'
+    PATH = "${JAVA_HOME}\\bin;${ALLURE_HOME};${env.PATH}"
+}
     stages {
 
         stage('Check Environment') {

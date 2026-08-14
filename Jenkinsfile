@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -42,12 +41,14 @@ pipeline {
         }
     }
 
-   allure([
-    allureVersion: '3',
-    results: [
-        [path: 'InventoryAuto/allure-results']
-    ]
-])
+    post {
+        always {
+            allure([
+                allureVersion: '3',
+                results: [
+                    [path: 'InventoryAuto/allure-results']
+                ]
+            ])
 
             archiveArtifacts(
                 artifacts: 'InventoryAuto/test-results/**/*,InventoryAuto/playwright-report/**/*',
@@ -57,4 +58,3 @@ pipeline {
         }
     }
 }
-

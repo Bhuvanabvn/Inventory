@@ -1,9 +1,12 @@
 pipeline {
-
     agent any
 
-    stages {
+    environment {
+        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21.0.12'
+        PATH = "${JAVA_HOME}\\bin;${env.PATH}"
+    }
 
+    stages {
         stage('Check Environment') {
             steps {
                 bat 'node --version'
@@ -11,7 +14,6 @@ pipeline {
                 bat 'java -version'
             }
         }
-
         stage('Install Dependencies') {
             steps {
                 dir('InventoryAuto') {
@@ -19,7 +21,6 @@ pipeline {
                 }
             }
         }
-
         stage('Install Playwright Browser') {
             steps {
                 dir('InventoryAuto') {
@@ -27,7 +28,6 @@ pipeline {
                 }
             }
         }
-
         stage('Run Playwright Tests') {
             steps {
                 dir('InventoryAuto') {
@@ -35,31 +35,17 @@ pipeline {
                 }
             }
         }
-
-        stage('Check Allure Results') {
+        stage('Generate Allure Report') {
             steps {
                 dir('InventoryAuto') {
-                    bat '''
-                        echo Checking Allure results...
-                        if exist allure-results (
-                            echo Allure results found
-                            dir allure-results
-                        ) else (
-                            echo ERROR: allure-results folder not found
-                            exit /b 1
-                        )
-                    '''
+                    bat 'allure generate allure-results --clean -o allure-report'
                 }
             }
         }
     }
-
     post {
         always {
-            allure(
-                commandline: 'Allure',
-                results: [[path: 'InventoryAuto/allure-results']]
-            )
+            archiveArtifacts artifacts: 'InventoryAuto/allure-report/**', allowEmptyArchive: true
         }
     }
 }

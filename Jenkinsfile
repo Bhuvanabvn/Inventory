@@ -42,13 +42,12 @@ pipeline {
         }
     }
 
-    post {
-        always {
-            allure([
-                results: [
-                    [path: 'InventoryAuto/allure-results']
-                ]
-            ])
+   allure([
+    allureVersion: '3',
+    results: [
+        [path: 'InventoryAuto/allure-results']
+    ]
+])
 
             archiveArtifacts(
                 artifacts: 'InventoryAuto/test-results/**/*,InventoryAuto/playwright-report/**/*',

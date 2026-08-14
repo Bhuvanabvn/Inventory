@@ -7,13 +7,14 @@ pipeline {
     PATH = "${JAVA_HOME}\\bin;${ALLURE_HOME};${env.PATH}"
 }
     stages {
-
-        stage('Check Environment') {
-            steps {
-                bat 'node --version'
-                bat 'npm --version'
-                bat 'java -version'
-            }
+stage('Check Environment') {
+    steps {
+        bat 'node --version'
+        bat 'npm --version'
+        bat 'java -version'
+        bat 'allure --version'
+    }
+}
         }
 
         stage('Install Dependencies') {

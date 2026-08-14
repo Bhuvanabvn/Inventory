@@ -1,11 +1,6 @@
 pipeline {
-    agent any
 
-    environment {
-        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21.0.12'
-        ALLURE_HOME = 'C:\\Users\\AGL.PM-BN-4072-LAP\\node_modules\\.bin'
-        PATH = "${JAVA_HOME}\\bin;${ALLURE_HOME};${env.PATH}"
-    }
+    agent any
 
     stages {
 
@@ -14,7 +9,6 @@ pipeline {
                 bat 'node --version'
                 bat 'npm --version'
                 bat 'java -version'
-                bat 'allure --version'
             }
         }
 
@@ -41,21 +35,30 @@ pipeline {
                 }
             }
         }
+
+        stage('Check Allure Results') {
+            steps {
+                dir('InventoryAuto') {
+                    bat '''
+                        echo Checking Allure results...
+                        if exist allure-results (
+                            echo Allure results found
+                            dir allure-results
+                        ) else (
+                            echo ERROR: allure-results folder not found
+                            exit /b 1
+                        )
+                    '''
+                }
+            }
+        }
     }
 
     post {
         always {
-            allure([
-                allureVersion: '3',
-                results: [
-                    [path: 'InventoryAuto/allure-results']
-                ]
-            ])
-
-            archiveArtifacts(
-                artifacts: 'InventoryAuto/test-results/**/*,InventoryAuto/playwright-report/**/*',
-                allowEmptyArchive: true,
-                fingerprint: true
+            allure(
+                commandline: 'Allure',
+                results: [[path: 'InventoryAuto/allure-results']]
             )
         }
     }

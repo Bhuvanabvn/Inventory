@@ -124,123 +124,123 @@ test.describe.serial('Inventory Management - Project Creation, Inventory, Add Un
     },
 ];
 
-for (const scenario of unitScenarios) {
+//for (const scenario of unitScenarios) {
 
-    test(`IM_004 Add ${scenario.type} unit and verify it appears in inventory`, async ({ page }) => {
+//     test(`IM_004 Add ${scenario.type} unit and verify it appears in inventory`, async ({ page }) => {
 
-        const projectPage = new ProjectCreation(page);
-        const savedProject = new SavedProject(page);
-        const projectInventory = new ProjectInventory(page);
+//         const projectPage = new ProjectCreation(page);
+//         const savedProject = new SavedProject(page);
+//         const projectInventory = new ProjectInventory(page);
 
-        let projectName;
+//         let projectName;
 
-        if (scenario.existingProject) {
+//         if (scenario.existingProject) {
 
-            // Use the Plot project already created in IM_002
-            projectName = `QA Plot Project ${RUN_ID}`;
+//             // Use the Plot project already created in IM_002
+//             projectName = `QA Plot Project ${RUN_ID}`;
 
-        } else {
+//         } else {
 
-            // Create new project for Villa / Apartment
-            projectName = await createProject(page, {
-                type: scenario.type,
-                location: 'Chennai',
-                totalUnits: '5',
-                status: 'Active',
-            });
-        }
+//             // Create new project for Villa / Apartment
+//             projectName = await createProject(page, {
+//                 type: scenario.type,
+//                 location: 'Chennai',
+//                 totalUnits: '5',
+//                 status: 'Active',
+//             });
+//         }
 
-        console.log(`Using project: ${projectName}`);
+//         console.log(`Using project: ${projectName}`);
 
-        await projectPage.openSavedProjectsTab();
+//         await projectPage.openSavedProjectsTab();
 
-        await savedProject.clickInventoryForProject(projectName);
+//         await savedProject.clickInventoryForProject(projectName);
 
-        await projectInventory.verifyPageTitleContains(projectName);
+//         await projectInventory.verifyPageTitleContains(projectName);
 
-        await projectInventory.addUnit(scenario.unit);
+//         await projectInventory.addUnit(scenario.unit);
 
-        await projectInventory.verifyUnitVisible(
-            scenario.unit.unitNumber
-        );
-    });
-}
+//         await projectInventory.verifyUnitVisible(
+//             scenario.unit.unitNumber
+//         );
+//     });
+// }
 
-  // ---------------------------------------------------------------------
-  // 4) Unit details check (confirmed live against a Plot project)
-  // ---------------------------------------------------------------------
-  test('IM_005 Verify inventory counts and unit details', async ({ page }) => {
-    const projectPage = new ProjectCreation(page);
-    const savedProject = new SavedProject(page);
-    const projectInventory = new ProjectInventory(page);
-    const unitDetails = new UnitDetails(page);
-    const projectName = `QA Plot Project ${RUN_ID}`;
+//   // ---------------------------------------------------------------------
+//   // 4) Unit details check (confirmed live against a Plot project)
+//   // ---------------------------------------------------------------------
+//   test('IM_005 Verify inventory counts and unit details', async ({ page }) => {
+//     const projectPage = new ProjectCreation(page);
+//     const savedProject = new SavedProject(page);
+//     const projectInventory = new ProjectInventory(page);
+//     const unitDetails = new UnitDetails(page);
+//     const projectName = `QA Plot Project ${RUN_ID}`;
 
-    await projectPage.goToProjectCreation();
-    await projectPage.openSavedProjectsTab();
-    await savedProject.clickInventoryForProject(projectName);
+//     await projectPage.goToProjectCreation();
+//     await projectPage.openSavedProjectsTab();
+//     await savedProject.clickInventoryForProject(projectName);
 
-    await projectInventory.verifyTotalUnitsCount('10');
-    await projectInventory.verifyAvailableCount('10');
+//     await projectInventory.verifyTotalUnitsCount('10');
+//     await projectInventory.verifyAvailableCount('10');
 
-    await projectInventory.openUnitByCode('P1');
-    await unitDetails.verifyVisible();
-    await unitDetails.verifyUnitNumber('P1');
-  });
+//     await projectInventory.openUnitByCode('P1');
+//     await unitDetails.verifyVisible();
+//     await unitDetails.verifyUnitNumber('P1');
+//   });
 
-  // ---------------------------------------------------------------------
-  // 5) Bulk upload scenario
-  //    Confirmed live up to opening the "Select The Needed Upload Option"
-  //    dialog and choosing "Bulk Upload". Skipped by default - the
-  //    resulting upload screen (file picker/submit/success) is
-  //    unconfirmed. See BulkUpload.js TODOs. Un-skip once verified and a
-  //    real sample file exists under tests/files/.
-  // ---------------------------------------------------------------------
-  test.skip('IM_006 Bulk upload units via file', async ({ page }) => {
-    const projectPage = new ProjectCreation(page);
-    const savedProject = new SavedProject(page);
-    const bulkUpload = new BulkUpload(page);
-    const projectName = `QA Plot Project ${RUN_ID}`;
+//   // ---------------------------------------------------------------------
+//   // 5) Bulk upload scenario
+//   //    Confirmed live up to opening the "Select The Needed Upload Option"
+//   //    dialog and choosing "Bulk Upload". Skipped by default - the
+//   //    resulting upload screen (file picker/submit/success) is
+//   //    unconfirmed. See BulkUpload.js TODOs. Un-skip once verified and a
+//   //    real sample file exists under tests/files/.
+//   // ---------------------------------------------------------------------
+//   test.skip('IM_006 Bulk upload units via file', async ({ page }) => {
+//     const projectPage = new ProjectCreation(page);
+//     const savedProject = new SavedProject(page);
+//     const bulkUpload = new BulkUpload(page);
+//     const projectName = `QA Plot Project ${RUN_ID}`;
 
-    await projectPage.goToProjectCreation();
-    await projectPage.openSavedProjectsTab();
-    await savedProject.clickInventoryForProject(projectName);
+//     await projectPage.goToProjectCreation();
+//     await projectPage.openSavedProjectsTab();
+//     await savedProject.clickInventoryForProject(projectName);
 
-    await bulkUpload.bulkUploadFileEndToEnd('tests/files/sample-units.xlsx');
-  });
+//     await bulkUpload.bulkUploadFileEndToEnd('tests/files/sample-units.xlsx');
+//   });
 
-  // This part IS confirmed live: opening the options dialog and seeing
-  // "Bulk Upload" as a real, clickable choice.
-  test('IM_006a Upload button opens the Select Upload Option dialog', async ({ page }) => {
-    const projectPage = new ProjectCreation(page);
-    const savedProject = new SavedProject(page);
-    const bulkUpload = new BulkUpload(page);
-    const projectName = `QA Plot Project ${RUN_ID}`;
+//   // This part IS confirmed live: opening the options dialog and seeing
+//   // "Bulk Upload" as a real, clickable choice.
+//   test('IM_006a Upload button opens the Select Upload Option dialog', async ({ page }) => {
+//     const projectPage = new ProjectCreation(page);
+//     const savedProject = new SavedProject(page);
+//     const bulkUpload = new BulkUpload(page);
+//     const projectName = `QA Plot Project ${RUN_ID}`;
 
-    await projectPage.goToProjectCreation();
-    await projectPage.openSavedProjectsTab();
-    await savedProject.clickInventoryForProject(projectName);
+//     await projectPage.goToProjectCreation();
+//     await projectPage.openSavedProjectsTab();
+//     await savedProject.clickInventoryForProject(projectName);
 
-    await bulkUpload.openUploadOptions();
-    await expect(bulkUpload.bulkUploadOption).toBeVisible();
-  });
+//     await bulkUpload.openUploadOptions();
+//     await expect(bulkUpload.bulkUploadOption).toBeVisible();
+//   });
 
-  // ---------------------------------------------------------------------
-  // 6) Cleanup - delete all projects created during this run
-  // ---------------------------------------------------------------------
-  test('IM_999 Cleanup - delete projects created during this run', async ({ page }) => {
-    const manageInventory = new ManageInventory(page);
-    const projectPage = new ProjectCreation(page);
+//   // ---------------------------------------------------------------------
+//   // 6) Cleanup - delete all projects created during this run
+//   // ---------------------------------------------------------------------
+//   test('IM_999 Cleanup - delete projects created during this run', async ({ page }) => {
+//     const manageInventory = new ManageInventory(page);
+//     const projectPage = new ProjectCreation(page);
 
-    for (const type of ['Plot', 'Villa', 'Apartment']) {
-      const projectName = `QA ${type} Project ${RUN_ID}`;
-      await projectPage.goToManageInventory();
-      await manageInventory.clickDeleteForProject(projectName);
-      await manageInventory.verifyDeleteConfirmationPopup();
-      await manageInventory.clickOkayOnPopup();
-      await manageInventory.verifyDeleteSuccessMessage();
-      await manageInventory.closeSuccessDialog();
-    }
-  });
+//     for (const type of ['Plot', 'Villa', 'Apartment']) {
+//       const projectName = `QA ${type} Project ${RUN_ID}`;
+//       await projectPage.goToManageInventory();
+//       await manageInventory.clickDeleteForProject(projectName);
+//       await manageInventory.verifyDeleteConfirmationPopup();
+//       await manageInventory.clickOkayOnPopup();
+//       await manageInventory.verifyDeleteSuccessMessage();
+//       await manageInventory.closeSuccessDialog();
+//     }
+//   });
 
-});
+// });

@@ -48,9 +48,16 @@ pipeline {
             }
         }
     }
-    post {
-        always {
-            archiveArtifacts artifacts: 'InventoryAuto/allure-report/**', allowEmptyArchive: true
-        }
+  post {
+    always {
+        allure([
+            results: [[path: 'InventoryAuto/allure-results']]
+        ])
+
+        archiveArtifacts(
+            artifacts: 'InventoryAuto/test-results/**/*,InventoryAuto/playwright-report/**/*',
+            allowEmptyArchive: true
+        )
     }
+}
 }

@@ -1,5 +1,4 @@
 pipeline {
-
     agent any
 
     environment {
@@ -43,24 +42,22 @@ pipeline {
         }
 
         stage('Generate Allure Report') {
-    steps {
-        dir('InventoryAuto') {
-            bat 'if exist allure-report rmdir /s /q allure-report'
-            bat 'allure generate allure-results -o allure-report'
+            steps {
+                dir('InventoryAuto') {
+                    bat 'if exist allure-report rmdir /s /q allure-report'
+                    bat 'allure generate allure-results -o allure-report'
+                }
+            }
         }
-    }
-}
     }
 
     post {
         always {
-            archiveArtifacts artifacts: '''
-                InventoryAuto/allure-report/**,
-                InventoryAuto/allure-results/**,
-                InventoryAuto/test-results/**,
-                InventoryAuto/playwright-report/**
-            ''',
-            allowEmptyArchive: true
+            archiveArtifacts artifacts: 'InventoryAuto/allure-report/**/*', allowEmptyArchive: true
+
+            allure([
+                results: [[path: 'InventoryAuto/allure-results']]
+            ])
         }
     }
 }

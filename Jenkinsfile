@@ -1,4 +1,5 @@
 pipeline {
+
     agent any
 
     environment {
@@ -7,13 +8,16 @@ pipeline {
     }
 
     stages {
+
         stage('Check Environment') {
             steps {
                 bat 'node --version'
                 bat 'npm --version'
                 bat 'java -version'
+                bat 'allure --version'
             }
         }
+
         stage('Install Dependencies') {
             steps {
                 dir('InventoryAuto') {
@@ -21,6 +25,7 @@ pipeline {
                 }
             }
         }
+
         stage('Install Playwright Browser') {
             steps {
                 dir('InventoryAuto') {
@@ -28,36 +33,33 @@ pipeline {
                 }
             }
         }
+
         stage('Run Playwright Tests') {
             steps {
                 dir('InventoryAuto') {
-                    script {
-                        def testStatus = bat(script: 'npx playwright test', returnStatus: true)
-                        if (testStatus != 0) {
-                            currentBuild.result = 'UNSTABLE'
-                        }
-                    }
+                    bat 'npx playwright test'
                 }
             }
         }
+
         stage('Generate Allure Report') {
             steps {
                 dir('InventoryAuto') {
-                    bat 'allure generate allure-results -o allure-report'
+                    bat 'allure generate allure-results -o allure-report --clean'
                 }
             }
         }
     }
-  post {
-    always {
-        allure([
-            results: [[path: 'InventoryAuto/allure-results']]
-        ])
 
-        archiveArtifacts(
-            artifacts: 'InventoryAuto/test-results/**/*,InventoryAuto/playwright-report/**/*',
+    post {
+        always {
+            archiveArtifacts artifacts: '''
+                InventoryAuto/allure-report/**,
+                InventoryAuto/allure-results/**,
+                InventoryAuto/test-results/**,
+                InventoryAuto/playwright-report/**
+            ''',
             allowEmptyArchive: true
-        )
+        }
     }
-}
 }

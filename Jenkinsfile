@@ -31,7 +31,12 @@ pipeline {
         stage('Run Playwright Tests') {
             steps {
                 dir('InventoryAuto') {
-                    bat 'npx playwright test'
+                    script {
+                        def testStatus = bat(script: 'npx playwright test', returnStatus: true)
+                        if (testStatus != 0) {
+                            currentBuild.result = 'UNSTABLE'
+                        }
+                    }
                 }
             }
         }

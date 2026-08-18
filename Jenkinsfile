@@ -43,7 +43,7 @@ pipeline {
         stage('Generate Allure Report') {
             steps {
                 dir('InventoryAuto') {
-                    bat 'allure generate allure-results --clean -o allure-report'
+                    bat 'allure generate allure-results -o allure-report'
                 }
             }
         }

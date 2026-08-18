@@ -1,30 +1,54 @@
 import { expect } from '@playwright/test';
 
 /**
- * Verified live on a Plot project's inventory page
- * (/manage-inventory/{id}?tab=PLOT).
+ * Verified LIVE on https://inventory-qa.mint360.in for all three unit
+ * types (Plot, Villa, Apartment) — 2026-08-18, via Playwright MCP
+ * browser session (login: management@adglobal360.com).
  *
- * Header cards: "TOTAL UNITS", "AVAILABLE", "SOLD", "BOOKED", "HOLD"
- * (plural/uppercase).
+ * Header cards: "TOTAL UNITS", "AVAILABLE", "SOLD", "BOOKED", "HOLD".
  *
- * IMPORTANT: a project only has ONE unit type. When a project is Plot,
- * the Villa and Apartment tab buttons are rendered *disabled*.
+ * A project has ONE unit type only. The other two tab buttons are
+ * rendered *disabled* on that project's inventory page.
  *
- * "Add Unit" opens a "Create Unit" dialog. Confirmed fields for a PLOT
- * project: Total Units*, Unit Number*, Plot Area (Sqft), Facing*
- * (native <select>: NORTH/EAST/WEST/SOUTH/NORTH-EAST/NORTH-WEST/
- * SOUTH-EAST/SOUTH-WEST), Sqft Price*, Status* (native <select>:
- * AVAILABLE/BOOKED/SOLD/HOLD).
+ * "Add Unit" opens a "Create Unit" dialog. THE FIELD SET AND ORDER
+ * DIFFERS PER UNIT TYPE — this is the root cause of the previous
+ * Jenkins failure (IM_004 Villa), where fields were located by
+ * positional index (`.nth(2)`, `.nth(3)`, ...) assuming the 6-field
+ * Plot layout. Villa/Apartment have 14 fields each, so those indices
+ * silently landed on the wrong inputs and several required fields
+ * were never filled, leaving the dialog open after submit.
  *
- * TODO (not yet confirmed live):
- * - The dialog's submit button never appeared in the accessibility
- *   snapshot even at a large viewport - `createUnitSubmitButton` below
- *   is a best-effort guess. Confirm the real name/selector in DevTools
- *   and update it before relying on `submitCreateUnit()`.
- * - Villa/Apartment "Create Unit" forms were not independently
- *   verified - they may have different/extra fields (e.g. BHK, built-up
- *   area). `fillUnitForm()` accepts an `extraFields` map for exactly
- *   this reason - wire it up once confirmed.
+ * Confirmed field order per type (label -> input type):
+ *
+ *  PLOT (6 fields):
+ *    Total Units* (text) | Unit Number* (text) | Plot Area (Sqft) (text)
+ *    | Facing* (select) | Sqft Price* (text) | Status* (select)
+ *
+ *  VILLA (14 fields):
+ *    Total Units* | Unit Number* | Carpet Area | Built-up Area | Plot Size
+ *    | Facing* (select) | No of Floors* | No of Bedroom* | No of Hall*
+ *    | No of Kitchen* | Toilets* | Car Parking* | Sqft Price*
+ *    | Status* (select)
+ *
+ *  APARTMENT (14 fields):
+ *    Total Units* | Unit Number* | Plot Area (Sqft) | UDS (Sqft)
+ *    | Carpet Area | Facing* (select) | Floor Number* | No of Bedroom*
+ *    | No of Hall* | No of Kitchen* | Toilets* | Car Parking*
+ *    | Sqft Price* | Status* (select)
+ *
+ * FIX APPROACH: every field is now located by walking up from its
+ * label text to the dialog, then finding the nearest input/select —
+ * NOT by raw position. This is resilient to field count/order
+ * differing across unit types, and to future fields being inserted.
+ *
+ * Unit card prefixes confirmed live: Plot -> "P#", Villa -> "V#",
+ * Apartment -> "A#" (e.g. P1, V1, A1).
+ *
+ * TODO: this.createUnitSubmitButton is matched by accessible name
+ * regex /save|create|submit/i. Confirm the exact visible label against
+ * live DevTools before relying on it in CI — the accessibility
+ * snapshot used to build this file did not expose the submit button's
+ * name explicitly.
  */
 export class ProjectInventory {
   constructor(page) {
@@ -52,23 +76,45 @@ export class ProjectInventory {
     this.addUnitButton = page.getByRole('button', { name: 'Add Unit' });
     this.uploadButton = page.getByRole('button', { name: 'Upload' });
 
-    // ---- Create Unit dialog (confirmed for Plot) ----
+    // ---- Create Unit dialog ----
     this.createUnitDialog = page.getByRole('dialog').filter({ hasText: 'Create Unit' });
-    this.totalUnitsInput = this.createUnitDialog.getByRole('textbox').nth(0); // defaults to "1"
-    this.unitNumberInput = this.createUnitDialog.getByRole('textbox').nth(1);
-    this.plotAreaInput = this.createUnitDialog.getByRole('textbox').nth(2);
-    this.facingSelect = this.createUnitDialog.locator('select').nth(0);
-    this.sqftPriceInput = this.createUnitDialog.getByRole('textbox').nth(3);
-    this.statusSelect = this.createUnitDialog.locator('select').nth(1);
-    // TODO: unconfirmed selector - verify against live DOM
-    this.createUnitSubmitButton = this.createUnitDialog.getByRole('button').first();
-   this.createUnitCloseButton = this.createUnitDialog.getByRole('button').nth(1);
 
-    // TODO: confirm P/V/A prefix convention against live Villa & Apartment projects
+    // Header row holds the dialog title + a close (X) icon button.
+    this._headerButtons = this.createUnitDialog.locator('> div').first().locator('button');
+    this.createUnitCloseButton = this._headerButtons.first();
+
+    // TODO: confirm exact visible label in DevTools before relying on this
+    // in CI (see class-level TODO above).
+    this.createUnitSubmitButton = this.createUnitDialog.getByRole('button', { name: /save|create|submit/i });
+
     this.plotUnitCards = page.locator('p', { hasText: /^P\d+$/ });
     this.villaUnitCards = page.locator('p', { hasText: /^V\d+$/ });
     this.apartmentUnitCards = page.locator('p', { hasText: /^A\d+$/ });
   }
+
+  // ---------------------------------------------------------------
+  // Generic, label-scoped field locators (unit-type agnostic)
+  // ---------------------------------------------------------------
+
+  /** Textbox whose field label (exact or prefix) is `labelText`. */
+  fieldInput(labelText) {
+    return this.createUnitDialog
+      .locator('div', { has: this.page.locator('text=' + labelText) })
+      .locator('input, textarea')
+      .first();
+  }
+
+  /** <select> whose field label (exact or prefix) is `labelText`. */
+  fieldSelect(labelText) {
+    return this.createUnitDialog
+      .locator('div', { has: this.page.locator('text=' + labelText) })
+      .locator('select')
+      .first();
+  }
+
+  // ---------------------------------------------------------------
+  // Page-level actions
+  // ---------------------------------------------------------------
 
   async verifyPageTitleContains(projectName) {
     await expect(this.pageTitle).toContainText(projectName.toUpperCase());
@@ -120,54 +166,154 @@ export class ProjectInventory {
   }
 
   /**
-   * Fills the Create Unit form. `extraFields` is a hook for Villa/Apartment
-   * specific fields once confirmed (e.g. { bhk: '2BHK', builtUpArea: '950' }).
+   * Fills the Create Unit form for a PLOT project.
+   * Confirmed fields: Total Units*, Unit Number*, Plot Area (Sqft),
+   * Facing*, Sqft Price*, Status*.
    */
-  async fillUnitForm({ totalUnits, unitNumber, area, facing, price, status, extraFields = {} }) {
+  async fillPlotUnitForm({ totalUnits, unitNumber, area, facing, price, status }) {
     if (totalUnits !== undefined) {
-      await this.totalUnitsInput.fill(String(totalUnits));
+      await this.fieldInput('Total Units').fill(String(totalUnits));
     }
-    await this.unitNumberInput.fill(unitNumber);
+    await this.fieldInput('Unit Number').fill(unitNumber);
     if (area !== undefined) {
-      await this.plotAreaInput.fill(String(area));
+      await this.fieldInput('Plot Area').fill(String(area));
     }
-    await this.facingSelect.selectOption(facing.toUpperCase());
-    await this.sqftPriceInput.fill(String(price));
-    await this.statusSelect.selectOption(status.toUpperCase());
-    // TODO: apply extraFields for Villa/Apartment once those fields are confirmed
-    void extraFields;
+    await this.fieldSelect('Facing').selectOption(facing.toUpperCase());
+    await this.fieldInput('Sqft Price').fill(String(price));
+    await this.fieldSelect('Status').selectOption(status.toUpperCase());
+  }
+
+  /**
+   * Fills the Create Unit form for a VILLA project.
+   * Confirmed fields: Total Units*, Unit Number*, Carpet Area,
+   * Built-up Area, Plot Size, Facing*, No of Floors*, No of Bedroom*,
+   * No of Hall*, No of Kitchen*, Toilets*, Car Parking*, Sqft Price*,
+   * Status*.
+   */
+  async fillVillaUnitForm({
+    totalUnits,
+    unitNumber,
+    carpetArea,
+    builtUpArea,
+    plotSize,
+    facing,
+    floors,
+    bedrooms,
+    halls,
+    kitchens,
+    toilets,
+    carParking,
+    price,
+    status,
+  }) {
+    if (totalUnits !== undefined) {
+      await this.fieldInput('Total Units').fill(String(totalUnits));
+    }
+    await this.fieldInput('Unit Number').fill(unitNumber);
+    if (carpetArea !== undefined) {
+      await this.fieldInput('Carpet Area').fill(String(carpetArea));
+    }
+    if (builtUpArea !== undefined) {
+      await this.fieldInput('Built-up Area').fill(String(builtUpArea));
+    }
+    if (plotSize !== undefined) {
+      await this.fieldInput('Plot Size').fill(String(plotSize));
+    }
+    await this.fieldSelect('Facing').selectOption(facing.toUpperCase());
+    await this.fieldInput('No of Floors').fill(String(floors));
+    await this.fieldInput('No of Bedroom').fill(String(bedrooms));
+    await this.fieldInput('No of Hall').fill(String(halls));
+    await this.fieldInput('No of Kitchen').fill(String(kitchens));
+    await this.fieldInput('Toilets').fill(String(toilets));
+    await this.fieldInput('Car Parking').fill(String(carParking));
+    await this.fieldInput('Sqft Price').fill(String(price));
+    await this.fieldSelect('Status').selectOption(status.toUpperCase());
+  }
+
+  /**
+   * Fills the Create Unit form for an APARTMENT project.
+   * Confirmed fields: Total Units*, Unit Number*, Plot Area (Sqft),
+   * UDS (Sqft), Carpet Area, Facing*, Floor Number*, No of Bedroom*,
+   * No of Hall*, No of Kitchen*, Toilets*, Car Parking*, Sqft Price*,
+   * Status*.
+   */
+  async fillApartmentUnitForm({
+    totalUnits,
+    unitNumber,
+    plotArea,
+    uds,
+    carpetArea,
+    facing,
+    floorNumber,
+    bedrooms,
+    halls,
+    kitchens,
+    toilets,
+    carParking,
+    price,
+    status,
+  }) {
+    if (totalUnits !== undefined) {
+      await this.fieldInput('Total Units').fill(String(totalUnits));
+    }
+    await this.fieldInput('Unit Number').fill(unitNumber);
+    if (plotArea !== undefined) {
+      await this.fieldInput('Plot Area').fill(String(plotArea));
+    }
+    if (uds !== undefined) {
+      await this.fieldInput('UDS').fill(String(uds));
+    }
+    if (carpetArea !== undefined) {
+      await this.fieldInput('Carpet Area').fill(String(carpetArea));
+    }
+    await this.fieldSelect('Facing').selectOption(facing.toUpperCase());
+    await this.fieldInput('Floor Number').fill(String(floorNumber));
+    await this.fieldInput('No of Bedroom').fill(String(bedrooms));
+    await this.fieldInput('No of Hall').fill(String(halls));
+    await this.fieldInput('No of Kitchen').fill(String(kitchens));
+    await this.fieldInput('Toilets').fill(String(toilets));
+    await this.fieldInput('Car Parking').fill(String(carParking));
+    await this.fieldInput('Sqft Price').fill(String(price));
+    await this.fieldSelect('Status').selectOption(status.toUpperCase());
   }
 
   async submitCreateUnit() {
     await this.createUnitSubmitButton.click();
-}
+  }
 
   async closeCreateUnitDialog() {
     await this.createUnitCloseButton.click();
   }
 
-  /** Full happy-path helper for adding one unit. */
- async addUnit(unitData) {
+  /** Full happy-path helper: add a Plot unit. */
+  async addPlotUnit(unitData) {
     await this.openAddUnitDialog();
+    await this.fillPlotUnitForm(unitData);
+    console.log(`Saving Plot unit: ${unitData.unitNumber}`);
+    await this.submitCreateUnit();
+    await expect(this.createUnitDialog).toBeHidden({ timeout: 10000 });
+  }
 
-    await this.fillUnitForm(unitData);
+  /** Full happy-path helper: add a Villa unit. */
+  async addVillaUnit(unitData) {
+    await this.openAddUnitDialog();
+    await this.fillVillaUnitForm(unitData);
+    console.log(`Saving Villa unit: ${unitData.unitNumber}`);
+    await this.submitCreateUnit();
+    await expect(this.createUnitDialog).toBeHidden({ timeout: 10000 });
+  }
 
-    console.log(`Saving unit: ${unitData.unitNumber}`);
+  /** Full happy-path helper: add an Apartment unit. */
+  async addApartmentUnit(unitData) {
+    await this.openAddUnitDialog();
+    await this.fillApartmentUnitForm(unitData);
+    console.log(`Saving Apartment unit: ${unitData.unitNumber}`);
+    await this.submitCreateUnit();
+    await expect(this.createUnitDialog).toBeHidden({ timeout: 10000 });
+  }
 
-    await this.createUnitSubmitButton.click();
-
-    await expect(this.createUnitDialog).toBeHidden({
-        timeout: 10000
-    });
-}
-
-async verifyUnitVisible(unitCode) {
-    const unit = this.page.getByText(unitCode, {
-        exact: true
-    });
-
-    await expect(unit).toBeVisible({
-        timeout: 15000
-    });
-}
+  async verifyUnitVisible(unitCode) {
+    const unit = this.page.getByText(unitCode, { exact: true });
+    await expect(unit).toBeVisible({ timeout: 15000 });
+  }
 }
